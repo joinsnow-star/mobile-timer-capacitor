@@ -1,0 +1,21 @@
+{
+  "name": "mobile-timer-capacitor",
+  "version": "1.0.0-alpha",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^7.2.0",
+    "@capacitor/core": "^7.2.0",
+    "sharp": "^0.34.1"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.2.0"
+  }
+}

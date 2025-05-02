@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>梦幻计时器 (移动版)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400..700&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#f3e7e9">
+
+    <style>
+        /* Styles remain largely the same */
+        html, body { height: 100%; overflow: hidden; position: relative; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Noto Sans SC', sans-serif; background: linear-gradient(135deg, #f3e7e9 0%, #e3eeff 100%); background-size: cover; background-position: center; background-attachment: fixed; transition: background 0.5s ease; display: flex; flex-direction: column; padding: 0; box-sizing: border-box; }
+        .main-content-area { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; flex-grow: 1; padding: 1rem; box-sizing: border-box; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .fantasy-title { font-family: 'Dancing Script', cursive; color: #6a5acd; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
+        .timer-display { font-family: 'Dancing Script', cursive; font-weight: 700; text-shadow: 1px 1px 3px rgba(0,0,0,0.1); color: #4a5568; }
+        .timer-box { backdrop-filter: blur(8px); border-radius: 1.5rem; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1); padding: 1.5rem; border: 1px solid rgba(255, 255, 255, 0.3); width: 100%; max-width: 400px; text-align: center; transition: background-color 0.5s ease; flex-shrink: 0; }
+        .btn { padding: 0.8rem 1.5rem; border-radius: 9999px; font-weight: 500; transition: all 0.3s ease; border: none; cursor: pointer; -webkit-user-select: none; user-select: none; }
+        .btn-primary { background: linear-gradient(135deg, #fda4af, #f472b6); color: white; box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4); }
+        .btn-primary:active { transform: translateY(1px); box-shadow: 0 2px 10px rgba(236, 72, 153, 0.3); }
+        .btn-secondary { background-color: rgba(255, 255, 255, 0.8); color: #ec4899; border: 1px solid #fbcfe8; }
+        .btn-secondary:active { background-color: rgba(255, 255, 255, 1); }
+        .btn-player { background-color: rgba(255, 255, 255, 0.7); color: #a78bfa; border: 1px solid #ddd6fe; padding: 0.6rem; width: 2.8rem; height: 2.8rem; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; transition: all 0.3s ease; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .btn-player:hover { background-color: rgba(255, 255, 255, 0.9); border-color: #c4b5fd; }
+        .btn-player:active { transform: scale(0.95); }
+        .settings-panel { position: fixed; bottom: -100%; left: 0; width: 100%; max-height: 85vh; background-color: rgba(255, 255, 255, 0.98); backdrop-filter: blur(10px); box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.1); padding: 0; transition: bottom 0.4s ease-in-out; z-index: 50; border-top-left-radius: 1.5rem; border-top-right-radius: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.4); display: flex; flex-direction: column; }
+        .settings-panel.open { bottom: 0; }
+        .settings-header { padding: 1rem 1.5rem; border-bottom: 1px solid #e5e7eb; flex-shrink: 0; position: relative; }
+        .settings-title { font-family: 'Dancing Script', cursive; color: #6a5acd; font-size: 1.75rem; margin-bottom: 0; text-align: center; }
+        .settings-content { padding: 1.5rem; overflow-y: auto; flex-grow: 1; -webkit-overflow-scrolling: touch; }
+        .settings-content::-webkit-scrollbar { width: 5px; }
+        .settings-content::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .settings-content::-webkit-scrollbar-thumb { background: #c4b5fd; border-radius: 10px; }
+        .settings-content::-webkit-scrollbar-thumb:hover { background: #a78bfa; }
+        .settings-section { margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px dashed #d1d5db; }
+        .settings-section:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+        .settings-section h3 { font-size: 1.1rem; font-weight: 500; color: #4b5563; margin-bottom: 1rem; padding-bottom: 0.25rem; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; }
+        .settings-section h3 i { margin-right: 0.5rem; width: 1.2em; text-align: center; }
+        .settings-section label { display: block; margin-bottom: 0.3rem; color: #4a5568; font-weight: 500; font-size: 0.9rem; }
+        .settings-section input[type="text"], .settings-section input[type="number"], .settings-section input[type="file"], .settings-section select, .settings-section input[type="range"] { width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 0.75rem; margin-bottom: 0.8rem; background-color: rgba(245, 245, 245, 0.9); font-size: 1rem; }
+        .settings-section input[type="range"] { padding: 0; height: 0.5rem; cursor: pointer; accent-color: #a78bfa; }
+        .settings-section input[type="file"] { padding: 0.5rem; }
+        .time-input-group { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
+        .time-input-group label { flex-basis: 45%; margin-bottom: 0; white-space: nowrap; font-size: 0.85rem; }
+        .time-input-group input[type="number"] { flex-grow: 1; margin-bottom: 0; text-align: right; padding: 0.5rem; }
+        .time-input-group span { font-size: 0.8rem; color: #6b7280; }
+        .opacity-control-group { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
+        #timer-opacity-value { font-size: 0.85rem; color: #6b7280; width: 3em; text-align: right; }
+        #video-bg { position: fixed; right: 0; bottom: 0; min-width: 100%; min-height: 100%; width: auto; height: auto; z-index: -100; background-size: cover; transition: opacity 1s ease-in-out; opacity: 0; pointer-events: none; }
+        #close-settings-button { position: absolute; top: 0.8rem; right: 1rem; font-size: 1.8rem; color: #9ca3af; background: none; border: none; padding: 0.5rem; line-height: 1; }
+        #settings-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.3); z-index: 40; opacity: 0; transition: opacity 0.4s ease-in-out; pointer-events: none; }
+        #settings-overlay.open { opacity: 1; pointer-events: auto; }
+        .log-container { display: flex; gap: 1rem; margin-top: 0.75rem; }
+        .log-box { flex: 1; text-align: left; padding: 0 0.5rem; }
+        .log-box h3 { text-align: center; font-size: 0.85rem; font-weight: 500; color: #6b7280; margin-bottom: 0.25rem; }
+        .log-box ul { list-style: none; padding: 0; margin: 0; max-height: 60px; overflow-y: auto; -webkit-overflow-scrolling: touch; font-size: 0.75rem; color: #718096; border: 1px solid #e2e8f0; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.5); }
+        .log-box ul li { padding: 0.2rem 0.5rem; border-bottom: 1px solid #f3f4f6; }
+        .log-box ul li:last-child { border-bottom: none; }
+        .log-box ul::-webkit-scrollbar { width: 4px; }
+        .log-box ul::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .log-box ul::-webkit-scrollbar-thumb { background: #fda4af; border-radius: 10px; }
+        #pause-log-count { font-weight: bold; color: #4b5563; }
+        #playlist { list-style: none; padding: 0; margin: 0.5rem 0 1rem 0; overflow-y: auto; max-height: 120px; border: 1px solid #e2e8f0; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.6); -webkit-overflow-scrolling: touch; }
+        #playlist li { padding: 0.6rem 0.75rem; border-bottom: 1px solid #e2e8f0; font-size: 0.875rem; color: #4a5568; transition: background-color 0.2s ease; display: flex; justify-content: space-between; align-items: center; }
+        #playlist li:last-child { border-bottom: none; }
+        #playlist li .track-name { flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 0.5rem; cursor: pointer; }
+        #playlist li .remove-track-btn { background: none; border: none; color: #ef4444; cursor: pointer; padding: 0.2rem; font-size: 0.9rem; transition: color 0.2s ease; flex-shrink: 0; }
+        #playlist li .remove-track-btn:hover { color: #dc2626; }
+        #playlist li.playing { background-color: rgba(199, 210, 254, 0.8); color: #4338ca; font-weight: 500; }
+        #playlist li.playing .remove-track-btn { color: #b91c1c; }
+        #playlist li.playing .remove-track-btn:hover { color: #991b1b; }
+        #playlist::-webkit-scrollbar { width: 5px; }
+        #playlist::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        #playlist::-webkit-scrollbar-thumb { background: #a78bfa; border-radius: 10px; }
+        #playlist::-webkit-scrollbar-thumb:hover { background: #8b5cf6; }
+        .playback-controls { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+        .playback-mode { display: flex; justify-content: space-around; align-items: center; font-size: 0.8rem; color: #6b7280; margin-top: 0.8rem; }
+        .playback-mode label { cursor: pointer; margin-bottom: 0; display: flex; align-items: center; gap: 0.2rem; }
+        .playback-mode input[type="radio"] { margin-right: 0.2rem; accent-color: #a78bfa; width: 0.8rem; height: 0.8rem; }
+        #current-track-info { font-size: 0.8rem; color: #6b7280; margin-top: 0.5rem; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 1.2em; }
+        .playlist-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+        #clear-playlist-button { background-color: rgba(254, 202, 202, 0.7); color: #ef4444; border: 1px solid rgba(252, 165, 165, 0.8); padding: 0.3rem 0.8rem; font-size: 0.8rem; border-radius: 9999px; transition: all 0.3s ease; cursor: pointer; }
+        #clear-playlist-button:hover { background-color: rgba(252, 165, 165, 0.9); border-color: #f87171; }
+    </style>
+</head>
+<body class="text-gray-700">
+    <video autoplay muted loop playsinline id="video-bg"> </video>
+
+    <div id="settings-overlay"></div>
+
+    <div class="main-content-area">
+        <h1 class="text-4xl sm:text-5xl font-bold mb-4 fantasy-title">梦幻计时器</h1>
+        <div id="main-timer-box" class="timer-box mb-6">
+            <div id="timer-label" class="text-xl sm:text-2xl mb-1 text-pink-500 font-semibold">准备开始</div>
+            <div id="main-timer" class="text-6xl sm:text-7xl timer-display mb-4">90:00</div>
+            <div class="flex justify-center space-x-3">
+                <button id="start-pause-button" class="btn btn-primary flex-grow">开始专注</button>
+                <button id="reset-button" class="btn btn-secondary"><i class="fas fa-redo"></i></button>
+                <button id="settings-button" class="btn btn-secondary"><i class="fas fa-cog"></i></button>
+            </div>
+        </div>
+        <div id="micro-break-box" class="timer-box w-full">
+            <h2 class="text-lg sm:text-xl mb-2 text-purple-500 font-semibold">小憩片刻</h2>
+            <div id="micro-break-timer" class="text-3xl sm:text-4xl timer-display mb-2 text-gray-500">--:--</div>
+             <div class="log-container">
+                 <div id="micro-break-log" class="log-box">
+                    <h3>小憩记录</h3>
+                    <ul></ul>
+                 </div>
+                 <div id="pause-log" class="log-box">
+                    <h3>暂停记录 (<span id="pause-log-count">0</span>)</h3>
+                    <ul></ul>
+                 </div>
+             </div>
+        </div>
+    </div>
+
+    <div id="settings-panel" class="settings-panel">
+        <div class="settings-header">
+             <h2 class="settings-title">个性化设置</h2>
+             <button id="close-settings-button">&times;</button>
+        </div>
+        <div class="settings-content">
+            <div class="settings-section">
+                <h3><i class="fas fa-clock text-purple-400"></i>时间设置</h3>
+                <div class="time-input-group">
+                    <label for="work-duration-input">专注时间:</label>
+                    <input type="number" id="work-duration-input" min="1" value="90">
+                    <span>分钟</span>
+                </div>
+                <div class="time-input-group">
+                    <label for="rest-duration-input">放松时间:</label>
+                    <input type="number" id="rest-duration-input" min="1" value="20">
+                    <span>分钟</span>
+                </div>
+                 <div class="time-input-group">
+                    <label for="micro-break-duration-input">小憩时间:</label>
+                    <input type="number" id="micro-break-duration-input" min="5" value="10">
+                     <span>秒</span>
+                </div>
+                 <div class="time-input-group">
+                    <label for="min-interval-input">小憩间隔 (最小):</label>
+                    <input type="number" id="min-interval-input" min="1" value="8">
+                    <span>分钟</span>
+                </div>
+                 <div class="time-input-group">
+                    <label for="max-interval-input">小憩间隔 (最大):</label>
+                    <input type="number" id="max-interval-input" min="1" value="10">
+                    <span>分钟</span>
+                </div>
+                 <button id="apply-time-settings" class="btn btn-secondary mt-3 w-full text-sm">应用时间设置</button>
+            </div>
+
+            <div class="settings-section">
+                <h3><i class="fas fa-image text-pink-400"></i>背景与外观</h3>
+                <label for="bg-type">背景类型:</label>
+                <select id="bg-type" name="bg-type">
+                    <option value="gradient">默认渐变</option>
+                    <option value="image">图片</option>
+                    <option value="video">视频</option>
+                </select>
+                <div id="bg-image-settings" class="hidden mt-2">
+                    <label for="bg-image-url">图片 URL:</label>
+                    <input type="text" id="bg-image-url" placeholder="输入图片链接...">
+                     <p class="text-xs text-gray-500 my-1 text-center">或</p>
+                    <label for="bg-image-file">上传图片:</label>
+                    <input type="file" id="bg-image-file" accept="image/*">
+                </div>
+                <div id="bg-video-settings" class="hidden mt-2">
+                    <label for="bg-video-url">视频 URL (.mp4, .webm):</label>
+                    <input type="text" id="bg-video-url" placeholder="输入视频链接...">
+                     <p class="text-xs text-gray-500 my-1 text-center">或</p>
+                    <label for="bg-video-file">上传视频:</label>
+                    <input type="file" id="bg-video-file" accept="video/mp4,video/webm">
+                </div>
+                 <button id="apply-background" class="btn btn-secondary mt-3 w-full text-sm">应用背景</button>
+
+                 <div class="mt-4">
+                    <label for="timer-opacity-slider">计时框透明度:</label>
+                    <div class="opacity-control-group">
+                        <input type="range" id="timer-opacity-slider" min="10" max="95" value="85"> <span id="timer-opacity-value" class="text-sm text-gray-600 w-10 text-right">85%</span>
+                    </div>
+                 </div>
+            </div>
+
+            <div class="settings-section">
+                <h3><i class="fas fa-bell text-blue-400"></i>提示音设置</h3>
+                <label for="main-sound-select">工作/休息切换:</label>
+                <select id="main-sound-select" name="main-sound-select" class="mb-2">
+                    <option value="default-main">默认音效 1</option>
+                    <option value="gentle-chime">轻柔风铃</option>
+                    <option value="harp-pluck">竖琴拨弦</option>
+                    <option value="custom">自定义上传</option>
+                </select>
+                <input type="file" id="main-sound-file" accept="audio/*" class="hidden mb-4">
+                <label for="micro-sound-select">小憩提示:</label>
+                <select id="micro-sound-select" name="micro-sound-select" class="mb-2">
+                    <option value="default-micro">默认音效 2</option>
+                    <option value="soft-bell">柔和铃铛</option>
+                    <option value="water-drop">水滴声</option>
+                    <option value="custom">自定义上传</option>
+                </select>
+                <input type="file" id="micro-sound-file" accept="audio/*" class="hidden mb-4">
+                 <p class="text-xs text-gray-500 mt-1">提示：自定义声音需浏览器支持。</p>
+            </div>
+
+            <div id="music-player-section" class="settings-section">
+                 <h3><i class="fas fa-music text-purple-400"></i>背景音乐</h3>
+                 <div class="playlist-actions">
+                    <label for="music-upload" class="btn btn-secondary !py-1 !px-3 !text-xs">
+                         <i class="fas fa-plus mr-1"></i> 添加音乐
+                    </label>
+                     <input type="file" id="music-upload" accept="audio/*" multiple class="hidden">
+                    <button id="clear-playlist-button"><i class="fas fa-trash-alt mr-1"></i> 清空</button>
+                 </div>
+                 <div id="current-track-info">未播放</div>
+                 <ul id="playlist">
+                     <li class="text-gray-400 italic px-3 py-2">暂无音乐，请上传...</li>
+                 </ul>
+                 <div class="playback-controls">
+                     <button id="prev-button" class="btn-player" title="上一首"><i class="fas fa-backward-step"></i></button>
+                     <button id="play-pause-music-button" class="btn-player" title="播放/暂停"><i class="fas fa-play"></i></button>
+                     <button id="next-button" class="btn-player" title="下一首"><i class="fas fa-forward-step"></i></button>
+                 </div>
+                  <div class="playback-mode">
+                     <label><input type="radio" name="playbackMode" value="sequential" checked> 顺序</label>
+                     <label><input type="radio" name="playbackMode" value="loop"> <i class="fas fa-repeat"></i></label>
+                     <label><input type="radio" name="playbackMode" value="random"> <i class="fas fa-random"></i></label>
+                 </div>
+            </div>
+        </div> </div>
+
+    <audio id="main-switch-audio"></audio>
+    <audio id="micro-break-audio"></audio>
+    <audio id="music-player-audio"></audio>
+
+    <script>
+        // === DOM Elements & State ===
+        const mainTimerDisplay = document.getElementById('main-timer');
+        const timerLabel = document.getElementById('timer-label');
+        const startPauseButton = document.getElementById('start-pause-button');
+        const resetButton = document.getElementById('reset-button');
+        const microBreakTimerDisplay = document.getElementById('micro-break-timer');
+        const microBreakLogUl = document.querySelector('#micro-break-log ul');
+        const pauseLogUl = document.querySelector('#pause-log ul');
+        const pauseLogCountSpan = document.getElementById('pause-log-count');
+        const mainSwitchAudio = document.getElementById('main-switch-audio');
+        const microBreakAudio = document.getElementById('micro-break-audio');
+        const mainTimerBox = document.getElementById('main-timer-box');
+        const microBreakBox = document.getElementById('micro-break-box');
+        let uiIsPaused = true;
+        let uiIsWorking = true;
+        let isAudioContextStarted = false; // Flag for Tone.js initialization
+
+        // === SETTINGS Elements ===
+        const settingsButton = document.getElementById('settings-button');
+        const closeSettingsButton = document.getElementById('close-settings-button');
+        const settingsPanel = document.getElementById('settings-panel');
+        const settingsContent = document.querySelector('.settings-content');
+        const settingsOverlay = document.getElementById('settings-overlay');
+        const workDurationInput = document.getElementById('work-duration-input');
+        const restDurationInput = document.getElementById('rest-duration-input');
+        const microBreakDurationInput = document.getElementById('micro-break-duration-input');
+        const minIntervalInput = document.getElementById('min-interval-input');
+        const maxIntervalInput = document.getElementById('max-interval-input');
+        const applyTimeSettingsButton = document.getElementById('apply-time-settings');
+        const bgTypeSelect = document.getElementById('bg-type');
+        const bgImageSettings = document.getElementById('bg-image-settings');
+        const bgVideoSettings = document.getElementById('bg-video-settings');
+        const bgImageUrlInput = document.getElementById('bg-image-url');
+        const bgImageFileInput = document.getElementById('bg-image-file');
+        const bgVideoUrlInput = document.getElementById('bg-video-url');
+        const bgVideoFileInput = document.getElementById('bg-video-file');
+        const applyBackgroundButton = document.getElementById('apply-background');
+        const videoBgElement = document.getElementById('video-bg');
+        const timerOpacitySlider = document.getElementById('timer-opacity-slider');
+        const timerOpacityValue = document.getElementById('timer-opacity-value');
+        const mainSoundSelect = document.getElementById('main-sound-select');
+        const mainSoundFile = document.getElementById('main-sound-file');
+        const microSoundSelect = document.getElementById('micro-sound-select');
+        const microSoundFile = document.getElementById('micro-sound-file');
+
+        // === MUSIC PLAYER Elements & State ===
+        const musicUploadInput = document.getElementById('music-upload');
+        const playlistElement = document.getElementById('playlist');
+        const musicPlayerAudio = document.getElementById('music-player-audio');
+        const playPauseMusicButton = document.getElementById('play-pause-music-button');
+        const prevButton = document.getElementById('prev-button');
+        const nextButton = document.getElementById('next-button');
+        const playbackModeRadios = document.querySelectorAll('input[name="playbackMode"]');
+        const currentTrackInfoElement = document.getElementById('current-track-info');
+        const clearPlaylistButton = document.getElementById('clear-playlist-button');
+        let playlist = [];
+        let currentTrackIndex = -1;
+        let isMusicPlaying = false;
+        let currentPlaybackMode = 'sequential';
+
+        // === Web Worker Setup ===
+        let timerWorker;
+        if (window.Worker) {
+            try {
+                console.log("Attempting to create Timer Worker...");
+                timerWorker = new Worker('timer-worker.js');
+                console.log("Timer Worker created successfully.");
+
+                timerWorker.onmessage = function(event) {
+                    const data = event.data;
+                    // console.log("Main received message:", data); // Verbose log
+
+                    switch (data.type) {
+                        case 'tick':
+                            updateUIFromWorker(data);
+                            break;
+                        case 'playSound':
+                            if (isAudioContextStarted) { // Only play if context is ready
+                                if (data.sound === 'main') { playMainSwitchSound(); }
+                                else if (data.sound === 'micro') { playMicroBreakSound(); }
+                            } else {
+                                console.warn("Audio context not started, skipping sound:", data.sound);
+                            }
+                            break;
+                        case 'logMicroBreak':
+                            logMicroBreak();
+                            break;
+                        case 'clearLogs':
+                            clearAllLogs();
+                            break;
+                        default:
+                            console.warn("Received unknown message type from worker:", data.type);
+                    }
+                };
+
+                timerWorker.onerror = function(error) {
+                    console.error("Error in Timer Worker:", error.message, error);
+                    alert("计时器后台线程出错，请尝试刷新页面。");
+                };
+
+            } catch (e) {
+                console.error("Failed to create Timer Worker:", e);
+                alert("无法创建后台计时器线程。计时器可能无法在后台运行。");
+                timerWorker = null; // Ensure worker is null if creation failed
+            }
+        } else {
+            console.error("Web Workers are not supported in this browser.");
+            alert("你的浏览器不支持后台计时器所需的功能，计时器可能在后台无法正常工作。");
+        }
+
+        // --- Audio Synthesis (Tone.js) ---
+        const synth = new Tone.Synth().toDestination();
+        const synth2 = new Tone.PolySynth(Tone.Synth).toDestination();
+        let playMainSwitchSound = () => { if (!isAudioContextStarted) return; synth2.triggerAttackRelease(["C4", "E4", "G4"], "1n"); console.log("Playing main switch sound"); };
+        let playMicroBreakSound = () => { if (!isAudioContextStarted) return; synth.triggerAttackRelease("C5", "8n"); console.log("Playing micro break sound"); };
+
+        // --- Function to start Audio Context ---
+        async function startAudioContext() {
+            if (isAudioContextStarted || Tone.context.state === 'running') {
+                isAudioContextStarted = true; // Ensure flag is set even if already running
+                return true;
+            }
+            try {
+                await Tone.start();
+                isAudioContextStarted = true;
+                console.log("Audio context started successfully via Tone.start() on user interaction.");
+                return true;
+            } catch (e) {
+                console.error("Error starting AudioContext:", e);
+                alert("无法启动音频，提示音可能无法播放。");
+                return false;
+            }
+        }
+
+        // --- Utility Functions ---
+        function formatTime(seconds) { const mins = Math.floor(seconds / 60); const secs = seconds % 60; return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`; }
+        function formatTimestamp(timestamp) { const date = new Date(timestamp); return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
+
+        // --- Display Update Functions ---
+        function updateUIFromWorker(data) {
+            mainTimerDisplay.textContent = formatTime(data.currentMainTime);
+            uiIsPaused = data.isPaused;
+            uiIsWorking = data.isWorking;
+            if (uiIsPaused) { startPauseButton.textContent = '继续'; timerLabel.textContent = uiIsWorking ? '专注暂停' : '休息暂停'; }
+            else { startPauseButton.textContent = '暂停'; timerLabel.textContent = uiIsWorking ? '专注中...' : '休息一下'; }
+            if (data.isMicroBreaking) { microBreakTimerDisplay.textContent = formatTime(data.currentMicroBreakCountdown); microBreakTimerDisplay.classList.remove('text-gray-500'); microBreakTimerDisplay.classList.add('text-purple-500'); }
+            else { microBreakTimerDisplay.textContent = '--:--'; microBreakTimerDisplay.classList.add('text-gray-500'); microBreakTimerDisplay.classList.remove('text-purple-500'); }
+            updatePauseLogDisplay(data.pauseCount, data.pauseLog);
+            // Update title only if needed (less frequent updates might be better for performance)
+            document.title = `${formatTime(data.currentMainTime)} - ${uiIsWorking ? '专注' : '休息'}${uiIsPaused ? ' (暂停)' : ''}`;
+        }
+        function logMicroBreak() { const now = new Date(); const timeString = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }); const li = document.createElement('li'); li.textContent = `小憩 @ ${timeString}`; microBreakLogUl.appendChild(li); microBreakLogUl.scrollTop = microBreakLogUl.scrollHeight; }
+        function updatePauseLogDisplay(count, logData) { if (!pauseLogCountSpan || !pauseLogUl) return; pauseLogCountSpan.textContent = count; pauseLogUl.innerHTML = ''; if (logData && logData.length > 0) { logData.forEach(timestamp => { const li = document.createElement('li'); li.textContent = `暂停 @ ${formatTimestamp(timestamp)}`; pauseLogUl.appendChild(li); }); pauseLogUl.scrollTop = pauseLogUl.scrollHeight; } }
+        function clearAllLogs() { if (microBreakLogUl) microBreakLogUl.innerHTML = ''; if (pauseLogUl) pauseLogUl.innerHTML = ''; if (pauseLogCountSpan) pauseLogCountSpan.textContent = '0'; }
+
+        // --- Timer Control Functions (Send commands to worker) ---
+        function pauseTimerCommand() { console.log("Sending PAUSE command to worker"); if (timerWorker) timerWorker.postMessage({ command: 'pause' }); }
+        function resumeTimerCommand() { console.log("Sending START command to worker"); if (timerWorker) timerWorker.postMessage({ command: 'start' }); }
+        function resetTimerCommand() { console.log("Sending RESET command to worker"); if (timerWorker) timerWorker.postMessage({ command: 'reset' }); }
+
+        // --- Settings Logic Functions ---
+        function applyTimeSettings() { console.log("Apply time settings button clicked"); const newWorkMin = parseInt(workDurationInput.value, 10); const newRestMin = parseInt(restDurationInput.value, 10); const newMicroSec = parseInt(microBreakDurationInput.value, 10); const newMinIntMin = parseInt(minIntervalInput.value, 10); const newMaxIntMin = parseInt(maxIntervalInput.value, 10); if (isNaN(newWorkMin) || newWorkMin < 1 || isNaN(newRestMin) || newRestMin < 1 || isNaN(newMicroSec) || newMicroSec < 5 || isNaN(newMinIntMin) || newMinIntMin < 1 || isNaN(newMaxIntMin) || newMaxIntMin < 1) { alert("请输入有效的时间数值 (所有时间需 > 0, 小憩时间 >= 5秒)。"); return; } if (newMinIntMin > newMaxIntMin) { alert("小憩间隔的最小值不能大于最大值。"); return; } const newSettings = { workDuration: newWorkMin * 60, restDuration: newRestMin * 60, microBreakDuration: newMicroSec, minMicroInterval: newMinIntMin * 60, maxMicroInterval: newMaxIntMin * 60 }; console.log("Sending new time settings to worker:", newSettings); if (timerWorker) { timerWorker.postMessage({ command: 'updateSettings', data: newSettings }); } alert("时间设置已发送，计时器将重置！"); closeSettings(); }
+        function initializeTimeInputs() { workDurationInput.value = 90; restDurationInput.value = 20; microBreakDurationInput.value = 10; minIntervalInput.value = 8; maxIntervalInput.value = 10; }
+        function updateTimerBoxOpacity() { const opacityValue = parseInt(timerOpacitySlider.value, 10); const alpha = opacityValue / 100; timerOpacityValue.textContent = `${opacityValue}%`; mainTimerBox.style.backgroundColor = `rgba(255, 255, 255, ${alpha})`; microBreakBox.style.backgroundColor = `rgba(255, 255, 255, ${alpha})`; }
+        function applyBackgroundSettings() { console.log("Apply background button clicked"); const type = bgTypeSelect.value; const imageUrl = bgImageUrlInput.value.trim(); const imageFile = bgImageFileInput.files[0]; const videoUrl = bgVideoUrlInput.value.trim(); const videoFile = bgVideoFileInput.files[0]; document.body.style.backgroundImage = ''; document.body.style.background = ''; videoBgElement.style.opacity = '0'; videoBgElement.src = ''; if (type === 'gradient') { document.body.style.background = 'linear-gradient(135deg, #f3e7e9 0%, #e3eeff 100%)'; document.body.style.backgroundAttachment = 'fixed'; } else if (type === 'image') { let urlToApply = ''; if (imageFile) { urlToApply = URL.createObjectURL(imageFile); } else if (imageUrl) { urlToApply = imageUrl; } if (urlToApply) { document.body.style.backgroundImage = `url('${urlToApply}')`; document.body.style.backgroundSize = 'cover'; document.body.style.backgroundPosition = 'center'; document.body.style.backgroundAttachment = 'fixed'; } else { document.body.style.background = 'linear-gradient(135deg, #f3e7e9 0%, #e3eeff 100%)'; document.body.style.backgroundAttachment = 'fixed'; alert("请输入图片URL或选择一个文件。"); } } else if (type === 'video') { let urlToApply = ''; if (videoFile) { urlToApply = URL.createObjectURL(videoFile); } else if (videoUrl) { urlToApply = videoUrl; } if (urlToApply) { videoBgElement.src = urlToApply; videoBgElement.style.opacity = '0.8'; } else { document.body.style.background = 'linear-gradient(135deg, #f3e7e9 0%, #e3eeff 100%)'; document.body.style.backgroundAttachment = 'fixed'; alert("请输入视频URL或选择一个文件。"); } } closeSettings(); }
+        function updateMainSound() { const selection = mainSoundSelect.value; mainSwitchAudio.src = ''; switch (selection) { case 'gentle-chime': playMainSwitchSound = () => { if (!isAudioContextStarted) return; synth2.triggerAttackRelease(["C5", "E5", "G5", "C6"], "1n", Tone.now()); }; break; case 'harp-pluck': playMainSwitchSound = () => { if (!isAudioContextStarted) return; synth2.triggerAttackRelease(["D4", "F#4", "A4", "D5"], "0.5n", Tone.now()); }; break; default: playMainSwitchSound = () => { if (!isAudioContextStarted) return; synth2.triggerAttackRelease(["C4", "E4", "G4"], "1n", Tone.now()); }; break; } console.log(`Main sound set to: ${selection}`); }
+        function updateMicroSound() { const selection = microSoundSelect.value; microBreakAudio.src = ''; switch (selection) { case 'soft-bell': playMicroBreakSound = () => { if (!isAudioContextStarted) return; synth.triggerAttackRelease("E5", "8n", Tone.now()); }; break; case 'water-drop': playMicroBreakSound = () => { if (!isAudioContextStarted) return; synth.triggerAttackRelease("G5", "16n", Tone.now()); }; break; default: playMicroBreakSound = () => { if (!isAudioContextStarted) return; synth.triggerAttackRelease("C5", "8n", Tone.now()); }; break; } console.log(`Micro sound set to: ${selection}`); }
+        function handleMainSoundFileChange(e) { if (e.target.files && e.target.files[0]) { const file = e.target.files[0]; const url = URL.createObjectURL(file); mainSwitchAudio.src = url; playMainSwitchSound = () => { if (!isAudioContextStarted) return; mainSwitchAudio.currentTime = 0; mainSwitchAudio.play().catch(e => console.error("Error playing main sound:", e)); }; console.log("Custom main sound loaded."); } }
+        function handleMicroSoundFileChange(e) { if (e.target.files && e.target.files[0]) { const file = e.target.files[0]; const url = URL.createObjectURL(file); microBreakAudio.src = url; playMicroBreakSound = () => { if (!isAudioContextStarted) return; microBreakAudio.currentTime = 0; microBreakAudio.play().catch(e => console.error("Error playing micro sound:", e)); }; console.log("Custom micro sound loaded."); } }
+
+        // --- Music Player Logic Functions ---
+        function updatePlaylistDisplay() { playlistElement.innerHTML = ''; if (playlist.length === 0) { playlistElement.innerHTML = '<li class="text-gray-400 italic px-3 py-2">暂无音乐，请上传...</li>'; currentTrackInfoElement.textContent = '未播放'; return; } playlist.forEach((track, index) => { const li = document.createElement('li'); const trackNameSpan = document.createElement('span'); trackNameSpan.textContent = track.name; trackNameSpan.classList.add('track-name'); trackNameSpan.addEventListener('click', () => { console.log(`Playlist item ${index} clicked`); playTrack(index); }); const removeBtn = document.createElement('button'); removeBtn.innerHTML = '<i class="fas fa-times"></i>'; removeBtn.classList.add('remove-track-btn'); removeBtn.title = '移除此歌曲'; removeBtn.addEventListener('click', (event) => { event.stopPropagation(); console.log(`Remove track button ${index} clicked`); removeTrack(index); }); li.appendChild(trackNameSpan); li.appendChild(removeBtn); li.dataset.index = index; if (index === currentTrackIndex) { li.classList.add('playing'); } playlistElement.appendChild(li); }); }
+        function removeTrack(indexToRemove) { if (indexToRemove < 0 || indexToRemove >= playlist.length) return; const removedTrack = playlist[indexToRemove]; console.log(`Removing track ${indexToRemove}: ${removedTrack.name}`); URL.revokeObjectURL(removedTrack.url); playlist.splice(indexToRemove, 1); if (indexToRemove === currentTrackIndex) { musicPlayerAudio.pause(); musicPlayerAudio.src = ''; isMusicPlaying = false; currentTrackIndex = -1; currentTrackInfoElement.textContent = '未播放'; updatePlayPauseButton(); if (playlist.length > 0) { playTrack(Math.min(indexToRemove, playlist.length - 1)); } } else if (indexToRemove < currentTrackIndex) { currentTrackIndex--; } updatePlaylistDisplay(); }
+        function clearPlaylist() { if (playlist.length === 0) return; if (!confirm("确定要清空整个播放列表吗？")) { return; } console.log("Clearing playlist"); musicPlayerAudio.pause(); musicPlayerAudio.src = ''; isMusicPlaying = false; playlist.forEach(track => URL.revokeObjectURL(track.url)); playlist = []; currentTrackIndex = -1; updatePlaylistDisplay(); updatePlayPauseButton(); currentTrackInfoElement.textContent = '未播放'; }
+        function handleMusicUpload(event) { console.log("Music upload input changed"); const files = event.target.files; if (!files || files.length === 0) return; for (let i = 0; i < files.length; i++) { const file = files[i]; if (file.type.startsWith('audio/')) { playlist.push({ name: file.name, url: URL.createObjectURL(file) }); } } updatePlaylistDisplay(); if (playlist.length > 0 && currentTrackIndex === -1) { currentTrackIndex = 0; loadTrack(currentTrackIndex); } updatePlayPauseButton(); event.target.value = null; }
+        function loadTrack(index) { if (index < 0 || index >= playlist.length) { console.error("Invalid track index"); currentTrackInfoElement.textContent = '加载失败'; return; } musicPlayerAudio.src = playlist[index].url; musicPlayerAudio.load(); currentTrackIndex = index; updatePlaylistDisplay(); currentTrackInfoElement.textContent = `正在加载: ${playlist[index].name}`; console.log(`Loading track ${index}: ${playlist[index].name}`); }
+        function playTrack(index = currentTrackIndex) { startAudioContext().then(success => { if (!success) return; console.log(`Attempting to play track ${index}`); if (index < 0 || index >= playlist.length) { if (playlist.length > 0) index = 0; else return; } if (index !== currentTrackIndex || musicPlayerAudio.src !== playlist[index].url) { loadTrack(index); musicPlayerAudio.addEventListener('canplay', () => { musicPlayerAudio.play().then(() => { isMusicPlaying = true; updatePlayPauseButton(); console.log(`Playing track ${index} after load`); }).catch(e => console.error("Error playing audio:", e)); }, { once: true }); } else { musicPlayerAudio.play().then(() => { isMusicPlaying = true; updatePlayPauseButton(); console.log(`Playing track ${index} directly`); }).catch(e => console.error("Error playing audio:", e)); } }); }
+        function pauseTrack() { musicPlayerAudio.pause(); isMusicPlaying = false; updatePlayPauseButton(); console.log("Music paused"); }
+        function togglePlayPauseMusic() { console.log("Play/Pause music button clicked"); if (playlist.length === 0) return; if (isMusicPlaying) { pauseTrack(); } else { if (currentTrackIndex === -1 && playlist.length > 0) { currentTrackIndex = 0; } playTrack(currentTrackIndex); } }
+        function updatePlayPauseButton() { const icon = playPauseMusicButton.querySelector('i'); if (isMusicPlaying) { icon.classList.remove('fa-play'); icon.classList.add('fa-pause'); } else { icon.classList.remove('fa-pause'); icon.classList.add('fa-play'); } }
+        function playNext() { console.log("Next music button clicked"); if (playlist.length === 0) return; let nextIndex; switch (currentPlaybackMode) { case 'random': nextIndex = Math.floor(Math.random() * playlist.length); if (playlist.length > 1) { while (nextIndex === currentTrackIndex) { nextIndex = Math.floor(Math.random() * playlist.length); } } break; case 'loop': playTrack(currentTrackIndex); return; default: nextIndex = (currentTrackIndex + 1) % playlist.length; break; } playTrack(nextIndex); }
+        function playPrevious() { console.log("Previous music button clicked"); if (playlist.length === 0) return; let prevIndex; switch (currentPlaybackMode) { case 'random': prevIndex = Math.floor(Math.random() * playlist.length); if (playlist.length > 1) { while (prevIndex === currentTrackIndex) { prevIndex = Math.floor(Math.random() * playlist.length); } } break; case 'loop': prevIndex = (currentTrackIndex - 1 + playlist.length) % playlist.length; break; default: prevIndex = (currentTrackIndex - 1 + playlist.length) % playlist.length; break; } playTrack(prevIndex); }
+        function handleTrackEnd() { console.log("Music Track ended"); isMusicPlaying = false; if (currentPlaybackMode === 'loop') { playTrack(currentTrackIndex); } else { playNext(); } }
+        function updatePlaybackMode() { currentPlaybackMode = document.querySelector('input[name="playbackMode"]:checked').value; musicPlayerAudio.loop = false; console.log("Playback mode set to:", currentPlaybackMode); }
+
+        // --- Event Listeners ---
+        function addSafeEventListener(element, event, handler, options) { if (element) { element.addEventListener(event, handler, options); } else { console.error(`Element not found for event listener: ${event}`); } }
+
+        addSafeEventListener(startPauseButton, 'click', async () => {
+             console.log("Start/Pause button clicked");
+             const audioReady = await startAudioContext(); // Ensure audio is ready
+             if (!audioReady) return; // Don't proceed if audio failed
+             if (uiIsPaused) { resumeTimerCommand(); } else { pauseTimerCommand(); }
+        });
+        addSafeEventListener(resetButton, 'click', async () => {
+            console.log("Reset button clicked");
+            const audioReady = await startAudioContext(); // Ensure audio is ready
+             if (!audioReady) return;
+            resetTimerCommand();
+        });
+        function openSettings() { console.log("Settings button clicked - opening"); initializeTimeInputs(); settingsPanel.classList.add('open'); settingsOverlay.classList.add('open'); }
+        function closeSettings() { console.log("Closing settings"); settingsPanel.classList.remove('open'); settingsOverlay.classList.remove('open'); }
+        addSafeEventListener(settingsButton, 'click', openSettings);
+        addSafeEventListener(closeSettingsButton, 'click', closeSettings);
+        addSafeEventListener(settingsOverlay, 'click', closeSettings);
+        addSafeEventListener(applyTimeSettingsButton, 'click', applyTimeSettings);
+        addSafeEventListener(bgTypeSelect, 'change', (e) => { const type = e.target.value; bgImageSettings.classList.toggle('hidden', type !== 'image'); bgVideoSettings.classList.toggle('hidden', type !== 'video'); });
+        addSafeEventListener(applyBackgroundButton, 'click', applyBackgroundSettings);
+        addSafeEventListener(timerOpacitySlider, 'input', updateTimerBoxOpacity);
+        addSafeEventListener(mainSoundSelect, 'change', (e) => { mainSoundFile.classList.toggle('hidden', e.target.value !== 'custom'); if (e.target.value !== 'custom') updateMainSound(); });
+        addSafeEventListener(microSoundSelect, 'change', (e) => { microSoundFile.classList.toggle('hidden', e.target.value !== 'custom'); if (e.target.value !== 'custom') updateMicroSound(); });
+        addSafeEventListener(mainSoundFile, 'change', handleMainSoundFileChange);
+        addSafeEventListener(microSoundFile, 'change', handleMicroSoundFileChange);
+        // Music player listeners
+        addSafeEventListener(musicUploadInput, 'change', handleMusicUpload);
+        addSafeEventListener(playPauseMusicButton, 'click', togglePlayPauseMusic);
+        addSafeEventListener(prevButton, 'click', playPrevious);
+        addSafeEventListener(nextButton, 'click', playNext);
+        addSafeEventListener(musicPlayerAudio, 'ended', handleTrackEnd);
+        addSafeEventListener(musicPlayerAudio, 'play', () => { if (currentTrackIndex !== -1) { currentTrackInfoElement.textContent = `正在播放: ${playlist[currentTrackIndex].name}`; } });
+        addSafeEventListener(musicPlayerAudio, 'pause', () => { if (musicPlayerAudio.ended) return; if (currentTrackIndex !== -1) { currentTrackInfoElement.textContent = `已暂停: ${playlist[currentTrackIndex].name}`; } });
+        playbackModeRadios.forEach(radio => { addSafeEventListener(radio, 'change', updatePlaybackMode); });
+        addSafeEventListener(clearPlaylistButton, 'click', clearPlaylist);
+
+        // --- Initial Setup ---
+        console.log("Initializing application...");
+        initializeTimeInputs();
+        // Don't reset timer on load, let worker send initial state
+        updateMainSound();
+        updateMicroSound();
+        updatePlaylistDisplay();
+        updatePlayPauseButton();
+        updatePlaybackMode();
+        updateTimerBoxOpacity();
+        // Request initial state from worker? Or assume worker posts it?
+        // Let's assume worker posts initial state via reset/tick on start.
+        console.log("Initialization complete.");
+
+        // *** DEBUG: Temporarily disable touchmove prevention ***
+        /*
+        document.addEventListener('touchmove', function(event) {
+            let targetElement = event.target;
+            let allowScroll = false;
+            while (targetElement && targetElement !== document.body) {
+                if ((targetElement.classList.contains('settings-content') || targetElement.id === 'playlist') && targetElement.scrollHeight > targetElement.clientHeight) {
+                    allowScroll = true;
+                    break;
+                }
+                if (targetElement.type === 'range') {
+                     allowScroll = true;
+                     break;
+                }
+                targetElement = targetElement.parentElement;
+            }
+            if (!allowScroll) {
+                 // console.log("Preventing touchmove"); // Debug log
+                 event.preventDefault();
+            }
+        }, { passive: false });
+        */
+
+        // Attempt to start audio context on first interaction anywhere
+        // This might be more reliable on mobile
+        // const startAudioHandler = async () => {
+        //     await startAudioContext();
+        //     // Remove the listener after the first interaction
+        //     document.body.removeEventListener('touchstart', startAudioHandler, { capture: true });
+        //     document.body.removeEventListener('click', startAudioHandler, { capture: true });
+        // };
+        // document.body.addEventListener('touchstart', startAudioHandler, { capture: true, once: true });
+        // document.body.addEventListener('click', startAudioHandler, { capture: true, once: true });
+
+
+    </script>
+    </body>
+</html>
